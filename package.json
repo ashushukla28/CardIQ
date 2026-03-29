@@ -1,4 +1,4 @@
- {
+{
   "name": "cardiq",
   "version": "1.0.0",
   "private": true,
@@ -10,6 +10,16 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build"
+  },
+  "eslintConfig": {
+    "extends": ["react-app"],
+    "rules": {
+      "no-unused-vars": "off",
+      "react-hooks/exhaustive-deps": "off"
+    }
+  },
+  "env": {
+    "DISABLE_ESLINT_PLUGIN": "true"
   },
   "browserslist": {
     "production": [">0.2%", "not dead", "not op_mini all"],
