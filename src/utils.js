@@ -17,35 +17,39 @@ export async function fetchCardsFromDB() {
     loungeAccess: { domestic: r.lounge_domestic, international: r.lounge_intl },
     welcomeBonus: r.welcome_bonus, minIncome: r.min_income,
     applyUrl: r.apply_url, bestFor: r.best_for,
+    lastVerified: r.last_verified || null,
     employment: r.employment || ["Salaried", "Self-Employed", "Business Owner"],
-    scores: {
-      cb: r.score_cashback, tr: r.score_travel, rw: r.score_rewards,
-      fu: r.score_fuel, di: r.score_dining, lf: r.score_low_fees,
-      fo: r.score_forex, em: r.score_emi,
-    },
+    cardType: r.card_type || "General",
+    isLifetimeFree: r.is_lifetime_free || false,
+    isMetal: r.is_metal || false,
+    coBrand: r.co_brand || null,
+    interestFreeDays: r.interest_free_days || 48,
+    milestoneBonus: r.milestone_bonus || null,
+    pointExpiry: r.point_expiry_months || 0,
+    cashbackCap: r.cashback_cap || 0,
+    acceleratedCats: r.accelerated_cats || [],
+    imageUrl: r.image_url || null,
   }));
 }
 
 export const FALLBACK = [
-  { id:1, name:"HDFC Regalia Gold", bank:"HDFC Bank", network:"Visa", joiningFee:2500, annualFee:2500, feeWaiver:"Rs4L/yr", apr:3.6, forexFee:2.0, rewardRate:4, pointValue:0.5, loungeAccess:{domestic:12,international:6}, welcomeBonus:2500, minIncome:100000, applyUrl:"https://www.hdfcbank.com/personal/pay/cards/credit-cards/regalia-gold-credit-card", bestFor:"Frequent travellers spending Rs4L+/yr", employment:["Salaried","Self-Employed","Business Owner"], scores:{cb:50,tr:80,rw:80,fu:60,di:75,lf:55,fo:60,em:65} },
-  { id:2, name:"HDFC Infinia Metal", bank:"HDFC Bank", network:"Visa", joiningFee:12500, annualFee:12500, feeWaiver:"No waiver", apr:1.99, forexFee:2.0, rewardRate:5, pointValue:1.0, loungeAccess:{domestic:99,international:99}, welcomeBonus:12500, minIncome:300000, applyUrl:"https://www.hdfcbank.com/personal/pay/cards/credit-cards/infinia-credit-card-metal-edition", bestFor:"HNI spenders wanting unlimited lounge", employment:["Salaried","Self-Employed","Business Owner"], scores:{cb:40,tr:99,rw:95,fu:65,di:85,lf:10,fo:60,em:70} },
-  { id:3, name:"Axis Atlas", bank:"Axis Bank", network:"Visa", joiningFee:5000, annualFee:5000, feeWaiver:"No waiver", apr:3.6, forexFee:3.5, rewardRate:5, pointValue:1.0, loungeAccess:{domestic:8,international:8}, welcomeBonus:5000, minIncome:150000, applyUrl:"https://www.axisbank.com/retail/cards/credit-card/axis-bank-atlas-credit-card", bestFor:"Heavy travel spenders", employment:["Salaried","Self-Employed","Business Owner"], scores:{cb:45,tr:95,rw:85,fu:55,di:65,lf:30,fo:50,em:55} },
-  { id:4, name:"SBI Cashback", bank:"SBI Card", network:"Visa", joiningFee:999, annualFee:999, feeWaiver:"Rs2L/yr", apr:3.5, forexFee:3.5, rewardRate:5, pointValue:1.0, loungeAccess:{domestic:0,international:0}, welcomeBonus:0, minIncome:30000, applyUrl:"https://www.sbicard.com/en/personal/credit-cards/cashback/sbi-card-cashback.page", bestFor:"Online shoppers wanting simple cashback", employment:["Salaried","Self-Employed","Business Owner"], scores:{cb:95,tr:20,rw:70,fu:50,di:40,lf:75,fo:25,em:60} },
-  { id:5, name:"ICICI Amazon Pay", bank:"ICICI Bank", network:"Visa", joiningFee:0, annualFee:0, feeWaiver:"Lifetime free", apr:3.5, forexFee:3.5, rewardRate:5, pointValue:1.0, loungeAccess:{domestic:0,international:0}, welcomeBonus:1500, minIncome:25000, applyUrl:"https://www.icicibank.com/personal-banking/cards/credit-card/amazon-pay-credit-card", bestFor:"Amazon Prime members", employment:["Salaried","Self-Employed","Business Owner","Student","Retired"], scores:{cb:80,tr:10,rw:55,fu:45,di:35,lf:100,fo:25,em:65} },
-  { id:6, name:"IDFC FIRST Wealth", bank:"IDFC FIRST Bank", network:"Visa", joiningFee:0, annualFee:0, feeWaiver:"Lifetime free", apr:0.75, forexFee:1.5, rewardRate:3, pointValue:0.25, loungeAccess:{domestic:4,international:0}, welcomeBonus:0, minIncome:150000, applyUrl:"https://www.idfcfirstbank.com/personal-banking/cards/credit-card/wealth-credit-card", bestFor:"Low-fee seekers who carry balance occasionally", employment:["Salaried","Self-Employed","Business Owner"], scores:{cb:55,tr:60,rw:60,fu:65,di:65,lf:90,fo:70,em:80} },
-  { id:7, name:"Axis Ace", bank:"Axis Bank", network:"Visa", joiningFee:499, annualFee:499, feeWaiver:"Rs2L/yr", apr:3.6, forexFee:3.5, rewardRate:5, pointValue:1.0, loungeAccess:{domestic:0,international:0}, welcomeBonus:500, minIncome:25000, applyUrl:"https://www.axisbank.com/retail/cards/credit-card/ace-credit-card", bestFor:"Cashback seekers on bills and Google Pay", employment:["Salaried","Self-Employed","Business Owner"], scores:{cb:85,tr:20,rw:60,fu:55,di:55,lf:80,fo:30,em:65} },
-  { id:8, name:"RBL World Safari", bank:"RBL Bank", network:"Mastercard", joiningFee:3000, annualFee:3000, feeWaiver:"Rs3L/yr", apr:3.99, forexFee:0, rewardRate:5, pointValue:0.5, loungeAccess:{domestic:4,international:4}, welcomeBonus:3000, minIncome:80000, applyUrl:"https://www.rblbank.com/credit-cards/world-safari-credit-card", bestFor:"International travellers wanting zero forex fee", employment:["Salaried","Self-Employed","Business Owner"], scores:{cb:35,tr:85,rw:70,fu:20,di:30,lf:45,fo:100,em:50} },
+  { id:1, name:"HDFC Regalia Gold", bank:"HDFC Bank", network:"Visa", joiningFee:2500, annualFee:2500, feeWaiver:"Rs4L/yr", apr:3.6, forexFee:2.0, rewardRate:4, pointValue:0.5, loungeAccess:{domestic:12,international:6}, welcomeBonus:2500, minIncome:100000, applyUrl:"https://www.hdfcbank.com/personal/pay/cards/credit-cards/regalia-gold-credit-card", bestFor:"Frequent travellers", employment:["Salaried","Self-Employed","Business Owner"], cardType:"Travel", isLifetimeFree:false, isMetal:false, coBrand:null, interestFreeDays:50, pointExpiry:0, cashbackCap:0, lastVerified:"2025-06-01", acceleratedCats:[{cat:"travel",rate:5,value:0.5}], imageUrl:null },
+  { id:2, name:"SBI Cashback", bank:"SBI Card", network:"Visa", joiningFee:999, annualFee:999, feeWaiver:"Rs2L/yr", apr:3.5, forexFee:3.5, rewardRate:5, pointValue:1.0, loungeAccess:{domestic:0,international:0}, welcomeBonus:0, minIncome:30000, applyUrl:"https://www.sbicard.com/en/personal/credit-cards/cashback/sbi-card-cashback.page", bestFor:"Online shoppers", employment:["Salaried","Self-Employed","Business Owner"], cardType:"Cashback", isLifetimeFree:false, isMetal:false, coBrand:null, interestFreeDays:50, pointExpiry:0, cashbackCap:5000, lastVerified:"2025-06-01", acceleratedCats:[{cat:"online",rate:5,value:1.0}], imageUrl:null },
+  { id:3, name:"ICICI Amazon Pay", bank:"ICICI Bank", network:"Visa", joiningFee:0, annualFee:0, feeWaiver:"Lifetime free", apr:3.5, forexFee:3.5, rewardRate:5, pointValue:1.0, loungeAccess:{domestic:0,international:0}, welcomeBonus:1500, minIncome:25000, applyUrl:"https://www.icicibank.com/personal-banking/cards/credit-card/amazon-pay-credit-card", bestFor:"Amazon Prime members", employment:["Salaried","Self-Employed","Business Owner","Student","Retired"], cardType:"Shopping", isLifetimeFree:true, isMetal:false, coBrand:"Amazon", interestFreeDays:48, pointExpiry:0, cashbackCap:0, lastVerified:"2025-06-01", acceleratedCats:[{cat:"online",rate:5,value:1.0}], imageUrl:null },
+  { id:4, name:"Axis Atlas", bank:"Axis Bank", network:"Visa", joiningFee:5000, annualFee:5000, feeWaiver:"No waiver", apr:3.6, forexFee:3.5, rewardRate:5, pointValue:1.0, loungeAccess:{domestic:8,international:8}, welcomeBonus:5000, minIncome:150000, applyUrl:"https://www.axisbank.com/retail/cards/credit-card/axis-bank-atlas-credit-card", bestFor:"Heavy travel spenders", employment:["Salaried","Self-Employed","Business Owner"], cardType:"Travel", isLifetimeFree:false, isMetal:false, coBrand:null, interestFreeDays:50, pointExpiry:24, cashbackCap:0, lastVerified:"2025-06-01", acceleratedCats:[{cat:"travel",rate:10,value:1.0}], imageUrl:null },
+  { id:5, name:"IDFC FIRST Wealth", bank:"IDFC FIRST Bank", network:"Visa", joiningFee:0, annualFee:0, feeWaiver:"Lifetime free", apr:0.75, forexFee:1.5, rewardRate:3, pointValue:0.25, loungeAccess:{domestic:4,international:0}, welcomeBonus:0, minIncome:150000, applyUrl:"https://www.idfcfirstbank.com/personal-banking/cards/credit-card/wealth-credit-card", bestFor:"Low-fee seekers", employment:["Salaried","Self-Employed","Business Owner"], cardType:"General", isLifetimeFree:true, isMetal:false, coBrand:null, interestFreeDays:48, pointExpiry:0, cashbackCap:0, lastVerified:"2025-06-01", acceleratedCats:[], imageUrl:null },
+  { id:6, name:"Axis Ace", bank:"Axis Bank", network:"Visa", joiningFee:499, annualFee:499, feeWaiver:"Rs2L/yr", apr:3.6, forexFee:3.5, rewardRate:5, pointValue:1.0, loungeAccess:{domestic:0,international:0}, welcomeBonus:500, minIncome:25000, applyUrl:"https://www.axisbank.com/retail/cards/credit-card/ace-credit-card", bestFor:"Cashback seekers", employment:["Salaried","Self-Employed","Business Owner"], cardType:"Cashback", isLifetimeFree:false, isMetal:false, coBrand:null, interestFreeDays:50, pointExpiry:0, cashbackCap:0, lastVerified:"2025-06-01", acceleratedCats:[{cat:"online",rate:5,value:1.0}], imageUrl:null },
 ];
 
 export const PREF_AREAS = [
-  { id:"cashback", icon:"💰", label:"Cashback", sk:"cb", desc:"Earn money back" },
-  { id:"travel", icon:"✈️", label:"Travel and Lounge", sk:"tr", desc:"Flights and airports" },
-  { id:"rewards", icon:"🎁", label:"Reward Points", sk:"rw", desc:"Points to redeem" },
-  { id:"fuel", icon:"⛽", label:"Fuel", sk:"fu", desc:"Surcharge waivers" },
-  { id:"dining", icon:"🍽️", label:"Dining", sk:"di", desc:"Food and restaurants" },
-  { id:"lowfees", icon:"📉", label:"Low Fees", sk:"lf", desc:"Minimal charges" },
-  { id:"forex", icon:"🌍", label:"Forex", sk:"fo", desc:"International spends" },
-  { id:"emi", icon:"📅", label:"EMI Offers", sk:"em", desc:"No-cost EMI deals" },
+  { id:"cashback", icon:"💰", label:"Cashback", desc:"Earn money back" },
+  { id:"travel", icon:"✈️", label:"Travel and Lounge", desc:"Flights and airports" },
+  { id:"rewards", icon:"🎁", label:"Reward Points", desc:"Points to redeem" },
+  { id:"fuel", icon:"⛽", label:"Fuel", desc:"Surcharge waivers" },
+  { id:"dining", icon:"🍽️", label:"Dining", desc:"Food and restaurants" },
+  { id:"lowfees", icon:"📉", label:"Low Fees", desc:"Minimal charges" },
+  { id:"forex", icon:"🌍", label:"Forex", desc:"International spends" },
+  { id:"emi", icon:"📅", label:"EMI Offers", desc:"No-cost EMI deals" },
 ];
 
 export const INCOME_MAP = {
@@ -57,23 +61,195 @@ export const EMP_TYPES = ["Salaried", "Self-Employed", "Business Owner", "Studen
 export const SPEND_CATS = ["Groceries", "Dining", "Travel", "Fuel", "Online Shopping", "Entertainment", "Utilities", "International"];
 export const CREDIT_SCORES = ["Excellent 750+", "Good 700-749", "Fair 650-699", "Not sure"];
 
-export function scoreCards(pool, priorities) {
-  const w = { cb:1, tr:1, rw:1, fu:1, di:1, lf:1, fo:1, em:1 };
-  if (priorities.length > 0) {
-    Object.keys(w).forEach((k) => (w[k] = 0.2));
-    priorities.forEach((pid, i) => {
-      const a = PREF_AREAS.find((x) => x.id === pid);
-      if (a) w[a.sk] = (3 - i) * 1.5;
-    });
-  }
-  return pool.map((c) => {
-    let raw = 0, tot = 0;
-    Object.entries(w).forEach(([k, wt]) => { raw += (c.scores[k] || 0) * wt; tot += wt * 100; });
-    return { ...c, finalScore: Math.round((raw / tot) * 100) };
-  }).sort((a, b) => b.finalScore - a.finalScore);
+const CAT_MAP = {
+  "Groceries":"groceries","Dining":"dining","Travel":"travel","Fuel":"fuel",
+  "Online Shopping":"online","Entertainment":"entertainment","Utilities":"utilities","International":"international",
+};
+
+export function effectiveRewardRate(card, userCats) {
+  if (!userCats || userCats.length === 0) return card.rewardRate * card.pointValue;
+  const accel = card.acceleratedCats || [];
+  let best = card.rewardRate * card.pointValue;
+  userCats.forEach((uc) => {
+    const mc = CAT_MAP[uc];
+    const match = accel.find((a) => a.cat === mc);
+    if (match) { const v = match.rate * (match.value || card.pointValue); if (v > best) best = v; }
+  });
+  return best;
 }
 
-export function genPros(c) {
+function calcFeeScore(c) {
+  if (c.annualFee === 0) return 100;
+  if (c.feeWaiver === "No waiver") {
+    if (c.annualFee >= 10000) return 5;
+    if (c.annualFee >= 5000) return 15;
+    if (c.annualFee >= 2000) return 30;
+    return 50;
+  }
+  if (c.annualFee <= 500) return 90;
+  if (c.annualFee <= 1000) return 82;
+  if (c.annualFee <= 2000) return 72;
+  if (c.annualFee <= 3000) return 60;
+  if (c.annualFee <= 5000) return 48;
+  return 35;
+}
+
+function calcRewardScore(c, userCats) {
+  const r = effectiveRewardRate(c, userCats);
+  if (r >= 5) return 100; if (r >= 4) return 90; if (r >= 3) return 78;
+  if (r >= 2) return 65; if (r >= 1) return 50; if (r >= 0.5) return 35;
+  return 20;
+}
+
+function calcCashbackScore(c, userCats) {
+  const base = calcRewardScore(c, userCats);
+  return c.pointValue >= 1.0 ? Math.min(100, base + 10) : Math.round(base * 0.75);
+}
+
+function calcTravelScore(c) {
+  const total = c.loungeAccess.domestic + (c.loungeAccess.international * 2);
+  const loungeScore = Math.min(60, total * 3);
+  const forexBonus = c.forexFee <= 0 ? 30 : c.forexFee <= 1.5 ? 20 : c.forexFee <= 2 ? 10 : 0;
+  return Math.min(100, loungeScore + forexBonus + (c.cardType === "Travel" ? 10 : 0));
+}
+
+function calcFuelScore(c) {
+  if (c.cardType === "Fuel") return Math.min(100, 90 + (c.rewardRate >= 5 ? 10 : 0));
+  if (c.network === "RuPay") return 55;
+  const accel = (c.acceleratedCats || []).find((a) => a.cat === "fuel");
+  if (accel) return Math.min(100, 50 + accel.rate * 4);
+  return Math.min(50, c.rewardRate * 8);
+}
+
+function calcDiningScore(c) {
+  const base = calcRewardScore(c, ["Dining"]);
+  return Math.min(100, base + (c.cardType === "Lifestyle" ? 15 : c.coBrand === "EazyDiner" ? 25 : 0));
+}
+
+function calcForexScore(c) {
+  if (c.forexFee === 0) return 100; if (c.forexFee <= 1.0) return 88;
+  if (c.forexFee <= 1.5) return 75; if (c.forexFee <= 2.0) return 60;
+  if (c.forexFee <= 2.5) return 45; if (c.forexFee <= 3.0) return 30;
+  return 15;
+}
+
+function calcEmiScore(c) {
+  if (c.apr <= 0) return 100; if (c.apr <= 1.0) return 92; if (c.apr <= 1.5) return 82;
+  if (c.apr <= 2.0) return 70; if (c.apr <= 2.5) return 58; if (c.apr <= 3.0) return 45;
+  if (c.apr <= 3.5) return 32; return 20;
+}
+
+export function computeDimensions(c, userCats) {
+  return {
+    cashback: calcCashbackScore(c, userCats),
+    travel: calcTravelScore(c),
+    rewards: calcRewardScore(c, userCats),
+    fuel: calcFuelScore(c),
+    dining: calcDiningScore(c),
+    lowfees: calcFeeScore(c),
+    forex: calcForexScore(c),
+    emi: calcEmiScore(c),
+  };
+}
+
+export function scoreCards(pool, priorities, incomeNum, userCats) {
+  const prefMap = { cashback:"cashback", travel:"travel", rewards:"rewards", fuel:"fuel", dining:"dining", lowfees:"lowfees", forex:"forex", emi:"emi" };
+  return pool.map((c) => {
+    const dims = computeDimensions(c, userCats);
+    const weights = { cashback:1, travel:1, rewards:1, fuel:1, dining:1, lowfees:1, forex:1, emi:1 };
+    if (priorities.length > 0) {
+      Object.keys(weights).forEach((k) => (weights[k] = 0.3));
+      priorities.forEach((pid, i) => { if (prefMap[pid]) weights[prefMap[pid]] = (3 - i) * 1.8; });
+    }
+    let raw = 0, tot = 0;
+    Object.entries(weights).forEach(([k, w]) => { raw += (dims[k] || 0) * w; tot += w * 100; });
+    let finalScore = Math.round((raw / tot) * 100);
+    let eligibilityNote = null;
+    if (incomeNum > 0) {
+      const gap = (c.minIncome - incomeNum) / (c.minIncome || 1);
+      if (gap > 0.5) { finalScore = Math.round(finalScore * 0.7); eligibilityNote = "Income may be below minimum — check eligibility with bank"; }
+      else if (gap > 0.2) { finalScore = Math.round(finalScore * 0.88); eligibilityNote = "You may need to negotiate eligibility with the bank"; }
+    }
+    finalScore = Math.min(100, Math.max(1, finalScore));
+    return { ...c, finalScore, dims, eligibilityNote };
+  })
+  .filter((c) => c.finalScore >= 50)
+  .sort((a, b) => b.finalScore - a.finalScore);
+}
+
+export function calcAnnualValue(c, monthly, userCats) {
+  if (!monthly || monthly <= 0) return null;
+  const annual = monthly * 12;
+  const effRate = effectiveRewardRate(c, userCats);
+  const rewardVal = annual * (effRate / 100);
+  const cappedRewardVal = c.cashbackCap > 0 ? Math.min(rewardVal, c.cashbackCap * 12) : rewardVal;
+  const loungeVal = (c.loungeAccess.domestic + c.loungeAccess.international) * 500;
+  const welcomeVal = (c.welcomeBonus * c.pointValue) / 2;
+  const netVal = cappedRewardVal + loungeVal + welcomeVal - c.annualFee;
+  return {
+    rewardVal: Math.round(cappedRewardVal),
+    loungeVal: Math.round(loungeVal),
+    welcomeVal: Math.round(welcomeVal),
+    annualFee: c.annualFee,
+    netVal: Math.round(netVal),
+    delta: Math.round(netVal - (annual * 0.005)),
+  };
+}
+
+export function explainScore(c, priorities, userCats) {
+  const lines = [];
+  if (priorities.includes("lowfees")) {
+    if (c.annualFee === 0) lines.push("Lifetime free — perfect for low fee priority");
+    else if (c.feeWaiver !== "No waiver") lines.push("Annual fee waivable on " + c.feeWaiver + " spend");
+    else lines.push("Annual fee Rs" + c.annualFee.toLocaleString() + " with no waiver");
+  }
+  if (priorities.includes("travel")) {
+    const total = c.loungeAccess.domestic + c.loungeAccess.international;
+    if (total >= 10) lines.push("Excellent lounge: " + c.loungeAccess.domestic + " domestic + " + c.loungeAccess.international + " intl/yr");
+    else if (total >= 4) lines.push(total + " lounge visits/yr");
+    else lines.push("Limited lounge access (" + total + " visits/yr)");
+  }
+  if (priorities.includes("cashback") || priorities.includes("rewards")) {
+    const eff = effectiveRewardRate(c, userCats);
+    lines.push("Earns Rs" + eff.toFixed(2) + " per Rs100 spent" + (userCats && userCats.length > 0 ? " for your spend mix" : ""));
+  }
+  if (priorities.includes("forex")) {
+    if (c.forexFee === 0) lines.push("Zero forex fee — best for international use");
+    else lines.push(c.forexFee + "% forex fee on international transactions");
+  }
+  if (priorities.includes("fuel")) {
+    const accel = (c.acceleratedCats || []).find((a) => a.cat === "fuel");
+    if (accel) lines.push(accel.rate + "X reward rate on fuel spends");
+    else lines.push("No dedicated fuel reward category");
+  }
+  return lines;
+}
+
+export function whyNotThisCard(card, topCard, priorities, userCats) {
+  const reasons = [];
+  const gap = topCard.finalScore - card.finalScore;
+  if (gap > 0) reasons.push("Scores " + gap + " points lower than " + topCard.name);
+  if (priorities.includes("lowfees") && card.annualFee > topCard.annualFee && card.feeWaiver === "No waiver")
+    reasons.push("Annual fee Rs" + card.annualFee.toLocaleString() + " vs Rs" + topCard.annualFee.toLocaleString() + " for top pick");
+  if (priorities.includes("travel")) {
+    const cl = card.loungeAccess.domestic + card.loungeAccess.international;
+    const tl = topCard.loungeAccess.domestic + topCard.loungeAccess.international;
+    if (cl < tl) reasons.push("Fewer lounge visits (" + cl + " vs " + tl + "/yr)");
+  }
+  if (priorities.includes("forex") && card.forexFee > topCard.forexFee)
+    reasons.push("Higher forex fee (" + card.forexFee + "% vs " + topCard.forexFee + "%)");
+  if (priorities.includes("cashback") || priorities.includes("rewards")) {
+    const ce = effectiveRewardRate(card, userCats);
+    const te = effectiveRewardRate(topCard, userCats);
+    if (ce < te) reasons.push("Lower returns (Rs" + ce.toFixed(2) + " vs Rs" + te.toFixed(2) + " per Rs100)");
+  }
+  const dims = card.dims || computeDimensions(card, userCats);
+  const best = Object.entries(dims).sort((a, b) => b[1] - a[1])[0];
+  const bestLabel = { cashback:"cashback", travel:"travel and lounge", rewards:"reward points", fuel:"fuel spends", dining:"dining", lowfees:"low fees", forex:"international spends", emi:"EMI and low interest" }[best[0]];
+  return { reasons, bestAt: bestLabel };
+}
+
+export function genPros(c, userCats) {
   const p = [];
   if (c.annualFee === 0) p.push("Lifetime free — zero annual fee ever");
   else if (c.feeWaiver && c.feeWaiver !== "No waiver") p.push("Fee waived on " + c.feeWaiver + " spend");
@@ -81,27 +257,22 @@ export function genPros(c) {
   else if (c.forexFee <= 1.5) p.push("Low " + c.forexFee + "% forex — good for international use");
   if (c.loungeAccess.domestic >= 12) p.push(c.loungeAccess.domestic + " domestic + " + c.loungeAccess.international + " intl lounge visits/yr");
   else if (c.loungeAccess.domestic >= 4) p.push(c.loungeAccess.domestic + " free domestic lounge visits/yr");
-  if (c.rewardRate >= 5) p.push("High " + c.rewardRate + "X reward rate on all spends");
+  const eff = effectiveRewardRate(c, userCats);
+  if (eff >= 3) p.push("High returns — Rs" + eff.toFixed(2) + " earned per Rs100 spent");
   if (c.welcomeBonus >= 5000) p.push("Rs" + c.welcomeBonus.toLocaleString() + " welcome bonus on joining");
   if (c.apr <= 1.5) p.push("Very low " + c.apr + "% APR — ideal if you carry balance");
+  if (c.isMetal) p.push("Premium metal card");
   return p.slice(0, 4);
 }
 
 export function genCons(c) {
   const p = [];
   if (c.joiningFee >= 5000) p.push("High joining fee of Rs" + c.joiningFee.toLocaleString());
-  if (c.annualFee >= 3000 && c.feeWaiver === "No waiver") p.push("No spend-based annual fee waiver");
+  if (c.annualFee >= 3000 && c.feeWaiver === "No waiver") p.push("Rs" + c.annualFee.toLocaleString() + " annual fee — no waiver option");
   if (c.forexFee >= 3.5) p.push("High " + c.forexFee + "% forex fee on international spends");
   if (c.pointValue <= 0.25) p.push("Low point value at Rs0.25 per point");
   if (c.loungeAccess.domestic === 0 && c.loungeAccess.international === 0) p.push("No airport lounge access");
   if (c.apr >= 3.6) p.push("High APR — avoid carrying a balance");
+  if (c.pointExpiry > 0 && c.pointExpiry <= 24) p.push("Points expire in " + c.pointExpiry + " months");
   return p.slice(0, 3);
-}
-
-export function calcSavings(c, monthly) {
-  if (!monthly || monthly <= 0) return null;
-  const annual = monthly * 12;
-  const rewardVal = annual * (c.rewardRate / 100) * c.pointValue;
-  const netVal = rewardVal - c.annualFee;
-  return { rewardVal, netVal, delta: netVal - annual * 0.003 };
 }
