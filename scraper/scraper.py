@@ -13,7 +13,7 @@ ALERT_EMAIL    = os.environ["ALERT_EMAIL"]
 
 # How many cards to check per run (to stay within API limits)
 # Full run = all cards. Set lower for testing.
-CARDS_PER_RUN  = 50
+CARDS_PER_RUN  = 10
 
 # ── SUPABASE ──────────────────────────────────────────────────────────────
 def sb_get(table, params=""):
@@ -65,7 +65,7 @@ No markdown, no explanation. Raw JSON only."""
         r = requests.post(
             "https://api.anthropic.com/v1/messages",
             headers={
-                "x-api-key": ANTHROPIC_KEY,
+                "x-api-key": ANTHROPIC_KEY.strip(),
                 "anthropic-version": "2023-06-01",
                 "Content-Type": "application/json"
             },
