@@ -1,55 +1,19 @@
-import os, re, time, smtplib, requests
+import os, re, json, time, smtplib, requests
 from datetime import date
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from playwright.sync_api import sync_playwright
 
 # ── CONFIG ────────────────────────────────────────────────────────────────
-SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_KEY = os.environ["SUPABASE_KEY"]
-GMAIL_USER   = os.environ["GMAIL_USER"]
-GMAIL_PASS   = os.environ["GMAIL_PASS"]
-ALERT_EMAIL  = os.environ["ALERT_EMAIL"]
+SUPABASE_URL   = os.environ["SUPABASE_URL"]
+SUPABASE_KEY   = os.environ["SUPABASE_KEY"]
+ANTHROPIC_KEY  = os.environ["ANTHROPIC_KEY"]
+GMAIL_USER     = os.environ["GMAIL_USER"]
+GMAIL_PASS     = os.environ["GMAIL_PASS"]
+ALERT_EMAIL    = os.environ["ALERT_EMAIL"]
 
-# ── BANK CARD PAGES (direct bank sites — much easier to scrape) ───────────
-BANK_SOURCES = [
-    {
-        "bank": "HDFC Bank",
-        "url": "https://www.hdfcbank.com/personal/pay/cards/credit-cards",
-        "name_selector": ".card-name, h3.title, .cardName",
-        "fee_selector": ".annual-fee, .fee-amount, [class*='fee']",
-    },
-    {
-        "bank": "SBI Card",
-        "url": "https://www.sbicard.com/en/personal/credit-cards.page",
-        "name_selector": ".card-title, h3, .cardTitle",
-        "fee_selector": ".annual-fee, .fee, [class*='fee']",
-    },
-    {
-        "bank": "Axis Bank",
-        "url": "https://www.axisbank.com/retail/cards/credit-card",
-        "name_selector": ".card-name, h3, .cardName",
-        "fee_selector": ".fee, .annual-fee, [class*='fee']",
-    },
-    {
-        "bank": "ICICI Bank",
-        "url": "https://www.icicibank.com/personal-banking/cards/credit-card",
-        "name_selector": ".card-name, h3, .cardTitle",
-        "fee_selector": ".fee, [class*='fee'], .annual-fee",
-    },
-    {
-        "bank": "Kotak Bank",
-        "url": "https://www.kotak.com/en/personal-banking/cards/credit-cards.html",
-        "name_selector": ".card-name, h3, .title",
-        "fee_selector": ".fee, .annual-fee",
-    },
-    {
-        "bank": "IDFC FIRST Bank",
-        "url": "https://www.idfcfirstbank.com/personal-banking/cards/credit-card",
-        "name_selector": ".card-name, h3, .cardName",
-        "fee_selector": ".fee, .annual-fee",
-    },
-]
+# How many cards to check per run (to stay within API limits)
+# Full run = all cards. Set lower for testing.
+CARDS_PER_RUN  = 50
 
 # ── SUPABASE ──────────────────────────────────────────────────────────────
 def sb_get(table, params=""):
@@ -76,197 +40,189 @@ def sb_insert(table, data):
         json=data
     ).raise_for_status()
 
-# ── PARSERS ───────────────────────────────────────────────────────────────
-def parse_fee(text):
-    if not text: return None
-    text = text.lower().replace(",", "").replace("rs", "").replace("₹", "").strip()
-    if any(w in text for w in ["free", "nil", "zero", "waived", "lifetime"]): return 0
-    nums = re.findall(r"\d+", text)
-    return int(nums[0]) if nums else None
+# ── CLAUDE WEB SEARCH ─────────────────────────────────────────────────────
+def lookup_card(card_name, bank):
+    """Use Claude with web search to get latest card data."""
+    prompt = f"""Search the web for the latest information about the {card_name} credit card by {bank} in India.
 
-def normalise(name):
-    return name.lower().strip().replace("-", " ").replace("  ", " ")
+Return ONLY a JSON object with these fields (use null if not found):
+{{
+  "annual_fee": <number in Rs, 0 if free>,
+  "joining_fee": <number in Rs, 0 if free>,
+  "reward_rate": <base reward points per Rs100 spent>,
+  "apr": <monthly interest rate as number e.g. 3.6>,
+  "forex_fee": <forex markup % as number e.g. 3.5>,
+  "lounge_domestic": <number of free domestic lounge visits per year>,
+  "lounge_intl": <number of free international lounge visits per year>,
+  "welcome_bonus": <welcome bonus points or Rs value as number>,
+  "fee_waiver": <spend waiver condition as string e.g. "Rs4L/yr" or "No waiver">,
+  "is_active": <true if card is still available, false if discontinued>
+}}
 
-def extract_bank(name):
-    banks = [
-        ("HDFC", "HDFC Bank"), ("SBI", "SBI Card"), ("ICICI", "ICICI Bank"),
-        ("Axis", "Axis Bank"), ("Kotak", "Kotak Bank"), ("IndusInd", "IndusInd Bank"),
-        ("IDFC", "IDFC FIRST Bank"), ("RBL", "RBL Bank"), ("YES", "YES Bank"),
-        ("Amex", "American Express"), ("American Express", "American Express"),
-        ("AU ", "AU Bank"), ("HSBC", "HSBC India"),
-        ("Standard Chartered", "Standard Chartered"),
-    ]
-    for key, full in banks:
-        if key.lower() in name.lower(): return full
-    return ""
+No markdown, no explanation. Raw JSON only."""
 
-# ── SCRAPE SINGLE BANK PAGE ───────────────────────────────────────────────
-def scrape_bank(page, source):
-    cards = []
     try:
-        print(f"  Scraping {source['bank']}...")
-        page.goto(source["url"], wait_until="networkidle", timeout=40000)
-        page.wait_for_timeout(3000)
-        # Scroll to load all cards
-        for _ in range(3):
-            page.evaluate("window.scrollBy(0, 800)")
-            page.wait_for_timeout(800)
-
-        # Try multiple common card container selectors
-        container_selectors = [
-            ".credit-card-item", ".card-item", ".card-block",
-            ".creditCard", "[class*='card-list'] > div",
-            "[class*='cardList'] > div", "article",
-        ]
-
-        blocks = []
-        for sel in container_selectors:
-            blocks = page.query_selector_all(sel)
-            if len(blocks) > 2:
-                print(f"    Found {len(blocks)} cards with selector: {sel}")
-                break
-
-        if not blocks:
-            # Fallback: find all headings that look like card names
-            headings = page.query_selector_all("h2, h3")
-            for h in headings:
-                text = h.inner_text().strip()
-                if "credit card" in text.lower() and len(text) > 8:
-                    # Try to find fee near this heading
-                    parent = h.evaluate_handle("el => el.closest('div, article, section')")
-                    fee_text = ""
-                    try:
-                        fee_el = parent.query_selector("[class*='fee'], .annual-fee")
-                        if fee_el: fee_text = fee_el.inner_text()
-                    except: pass
-                    cards.append({
-                        "name": text, "bank": source["bank"],
-                        "annual_fee": parse_fee(fee_text), "reward_rate": None
-                    })
-            return cards
-
-        for block in blocks:
-            try:
-                name_el = block.query_selector(source["name_selector"])
-                if not name_el:
-                    name_el = block.query_selector("h2, h3, h4")
-                if not name_el: continue
-                name = name_el.inner_text().strip()
-                if len(name) < 5 or "credit card" not in name.lower(): continue
-
-                fee_el = block.query_selector(source["fee_selector"])
-                if not fee_el:
-                    fee_el = block.query_selector("[class*='fee'], [class*='Fee']")
-                annual_fee = parse_fee(fee_el.inner_text() if fee_el else "")
-
-                cards.append({"name": name, "bank": source["bank"], "annual_fee": annual_fee, "reward_rate": None})
-            except Exception:
-                continue
-
+        r = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": ANTHROPIC_KEY,
+                "anthropic-version": "2023-06-01",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "claude-haiku-4-5-20251001",
+                "max_tokens": 300,
+                "tools": [{"type": "web_search_20250305", "name": "web_search"}],
+                "messages": [{"role": "user", "content": prompt}]
+            },
+            timeout=60
+        )
+        r.raise_for_status()
+        data = r.json()
+        text = "".join(b["text"] for b in data.get("content", []) if b.get("type") == "text")
+        text = text.replace("```json", "").replace("```", "").strip()
+        m = re.search(r"\{[\s\S]*\}", text)
+        if m:
+            return json.loads(m.group(0))
     except Exception as e:
-        print(f"  Error scraping {source['bank']}: {e}")
+        print(f"  Claude lookup failed for {card_name}: {e}")
+    return None
 
-    print(f"  {source['bank']}: {len(cards)} cards found")
-    return cards
+# ── COMPARE FIELDS ────────────────────────────────────────────────────────
+COMPARE_FIELDS = {
+    "annual_fee":       ("annual_fee",    50,   "💸 Annual fee"),
+    "joining_fee":      ("joining_fee",   50,   "🪙 Joining fee"),
+    "reward_rate":      ("reward_rate",   0.5,  "🎁 Reward rate"),
+    "apr":              ("apr",           0.2,  "📈 APR"),
+    "forex_fee":        ("forex_fee",     0.3,  "🌍 Forex fee"),
+    "lounge_domestic":  ("lounge_domestic", 1,  "✈️ Domestic lounge"),
+    "lounge_intl":      ("lounge_intl",   1,    "🛬 Intl lounge"),
+}
+
+def detect_changes(card, new_data):
+    changes = {}
+    change_log = []
+    for field, (db_field, threshold, label) in COMPARE_FIELDS.items():
+        new_val = new_data.get(field)
+        if new_val is None: continue
+        old_val = card.get(db_field)
+        if old_val is None: continue
+        try:
+            if abs(float(new_val) - float(old_val)) > threshold:
+                changes[db_field] = new_val
+                change_log.append(f"{label}: {old_val} → {new_val}")
+        except: continue
+    # Check if card was discontinued
+    if new_data.get("is_active") is False and card.get("is_active", True):
+        changes["is_active"] = False
+        change_log.append("❌ Card appears to be discontinued")
+    return changes, change_log
 
 # ── MAIN ──────────────────────────────────────────────────────────────────
 def run():
-    print("Fetching existing cards from Supabase...")
-    existing = sb_get("cards", "select=id,name,bank,annual_fee,reward_rate")
-    existing_map = {normalise(c["name"]): c for c in existing}
-    print(f"Loaded {len(existing)} existing cards")
+    print("Fetching cards from Supabase...")
+    all_cards = sb_get("cards", "select=id,name,bank,annual_fee,joining_fee,reward_rate,apr,forex_fee,lounge_domestic,lounge_intl,is_active&is_active=eq.true&order=id")
+    print(f"Loaded {len(all_cards)} active cards")
 
-    all_scraped = []
-    print("Starting Playwright browser...")
-    with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-blink-features=AutomationControlled"]
-        )
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            viewport={"width": 1280, "height": 800},
-            extra_http_headers={"Accept-Language": "en-IN,en;q=0.9"}
-        )
-        page = context.new_page()
-        # Hide automation signals
-        page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    # Process in batches — rotate through cards each week
+    # This week's batch based on day of year
+    day_of_year = date.today().timetuple().tm_yday
+    week_num = day_of_year // 7
+    start = (week_num * CARDS_PER_RUN) % len(all_cards)
+    batch = all_cards[start:start + CARDS_PER_RUN]
+    print(f"Checking batch: cards {start+1} to {start+len(batch)} of {len(all_cards)}")
 
-        for source in BANK_SOURCES:
-            cards = scrape_bank(page, source)
-            all_scraped.extend(cards)
-            time.sleep(2)
-
-        browser.close()
-
-    print(f"\nTotal scraped: {len(all_scraped)} cards")
-
-    # Deduplicate
-    scraped_map = {}
-    for c in all_scraped:
-        key = normalise(c["name"])
-        if key not in scraped_map: scraped_map[key] = c
-
-    updates = []
-    new_cards = []
+    all_updates = []
+    new_cards_found = []
     today = str(date.today())
 
-    for key, scraped in scraped_map.items():
-        if key in existing_map:
-            existing_card = existing_map[key]
-            changes = {}
-            if scraped.get("annual_fee") is not None:
-                existing_fee = int(existing_card.get("annual_fee") or 0)
-                if abs(scraped["annual_fee"] - existing_fee) > 50:
-                    changes["annual_fee"] = scraped["annual_fee"]
-                    updates.append(f"💸 {existing_card['name']}: Fee Rs{existing_fee} → Rs{scraped['annual_fee']}")
-            if changes:
-                changes["last_verified"] = today
-                sb_update("cards", "id", existing_card["id"], changes)
-        else:
-            new_card = {
-                "name": scraped["name"],
-                "bank": scraped.get("bank") or extract_bank(scraped["name"]),
-                "network": "Visa",
-                "annual_fee": scraped.get("annual_fee") or 0,
-                "joining_fee": scraped.get("annual_fee") or 0,
-                "fee_waiver": "Check issuer website",
-                "apr": 3.5, "forex_fee": 3.5, "reward_rate": 1,
-                "point_value": 0.25, "lounge_domestic": 0, "lounge_intl": 0,
-                "welcome_bonus": 0, "min_income": 25000,
-                "apply_url": source.get("url", ""),
-                "best_for": "Verify full details on issuer website",
-                "is_active": True, "last_verified": today,
-                "score_cashback": 50, "score_travel": 50, "score_rewards": 50,
-                "score_fuel": 50, "score_dining": 50, "score_low_fees": 50,
-                "score_forex": 50, "score_emi": 50,
-            }
-            try:
-                sb_insert("cards", new_card)
-                new_cards.append(scraped["name"])
-            except Exception as e:
-                print(f"  Insert failed for {scraped['name']}: {e}")
+    for i, card in enumerate(batch):
+        name = card["name"]
+        bank = card["bank"]
+        print(f"[{i+1}/{len(batch)}] Checking: {name}...")
 
-    send_email(updates, new_cards, len(scraped_map))
-    print(f"\nDone. {len(updates)} updates, {len(new_cards)} new cards added.")
+        new_data = lookup_card(name, bank)
+        if not new_data:
+            print(f"  No data returned")
+            time.sleep(1)
+            continue
+
+        changes, change_log = detect_changes(card, new_data)
+
+        if changes:
+            changes["last_verified"] = today
+            sb_update("cards", "id", card["id"], changes)
+            for log in change_log:
+                all_updates.append(f"{name}: {log}")
+            print(f"  Updated: {', '.join(change_log)}")
+        else:
+            # Still update last_verified even if no changes
+            sb_update("cards", "id", card["id"], {"last_verified": today})
+            print(f"  No changes")
+
+        time.sleep(2)  # Rate limit — 2s between API calls
+
+    # Also search for brand new Indian credit cards launched recently
+    print("\nSearching for newly launched cards...")
+    new_data = search_new_cards()
+    for card_name in new_data:
+        new_cards_found.append(card_name)
+
+    send_email(all_updates, new_cards_found, len(batch))
+    print(f"\nDone. Checked {len(batch)} cards. {len(all_updates)} updates. {len(new_cards_found)} new cards.")
+
+# ── SEARCH FOR NEW CARDS ──────────────────────────────────────────────────
+def search_new_cards():
+    """Search for credit cards launched in India recently."""
+    prompt = f"""Search the web for credit cards newly launched in India in 2025 or 2026 that are NOT in this common list: HDFC Regalia, Axis Atlas, SBI Cashback, ICICI Amazon Pay, OneCard.
+
+Return ONLY a JSON array of new card names you find:
+["Card Name 1", "Card Name 2"]
+
+No markdown. Raw JSON array only. Return empty array [] if none found."""
+
+    try:
+        r = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json"},
+            json={
+                "model": "claude-haiku-4-5-20251001",
+                "max_tokens": 200,
+                "tools": [{"type": "web_search_20250305", "name": "web_search"}],
+                "messages": [{"role": "user", "content": prompt}]
+            },
+            timeout=60
+        )
+        r.raise_for_status()
+        data = r.json()
+        text = "".join(b["text"] for b in data.get("content", []) if b.get("type") == "text")
+        text = text.replace("```json", "").replace("```", "").strip()
+        m = re.search(r"\[[\s\S]*\]", text)
+        if m:
+            names = json.loads(m.group(0))
+            print(f"New cards found: {names}")
+            return names
+    except Exception as e:
+        print(f"New card search failed: {e}")
+    return []
 
 # ── EMAIL ─────────────────────────────────────────────────────────────────
-def send_email(updates, new_cards, total_scraped):
+def send_email(updates, new_cards, checked_count):
     if not updates and not new_cards:
-        subject = "CardIQ Weekly Scrape — No Changes"
-        body = f"<p>Scraped <strong>{total_scraped}</strong> cards from bank websites. All data up to date.</p>"
+        subject = f"CardIQ Weekly — {checked_count} cards checked, all up to date"
+        body = f"<p>Checked <strong>{checked_count}</strong> cards using live web search. No changes detected.</p>"
     else:
-        subject = f"CardIQ Weekly Update — {len(updates)} changes, {len(new_cards)} new cards"
-        lines = [f"<p>Scraped <strong>{total_scraped}</strong> cards this week.</p>"]
+        subject = f"CardIQ Weekly — {len(updates)} changes, {len(new_cards)} new cards"
+        lines = [f"<p>Checked <strong>{checked_count}</strong> cards this week.</p>"]
         if updates:
-            lines.append("<h2>Data Changes</h2><ul>")
+            lines.append("<h2>Data Changes Detected</h2><ul>")
             for u in updates: lines.append(f"<li>{u}</li>")
             lines.append("</ul>")
         if new_cards:
-            lines.append("<h2>New Cards Added</h2><ul>")
-            for c in new_cards: lines.append(f"<li>{c} — review in Supabase</li>")
+            lines.append("<h2>Newly Launched Cards Found</h2><ul>")
+            for c in new_cards: lines.append(f"<li>{c} — add to Supabase manually</li>")
             lines.append("</ul>")
-        lines.append("<p><a href='https://supabase.com/dashboard'>Open Supabase</a></p>")
+        lines.append("<p><a href='https://supabase.com/dashboard'>Open Supabase to review</a></p>")
         body = "".join(lines)
 
     try:
