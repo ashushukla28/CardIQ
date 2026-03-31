@@ -3,7 +3,7 @@ name: Weekly Card Data Scraper
 on:
   schedule:
     - cron: "0 3 * * 0"  # Every Sunday at 3am UTC (8:30am IST)
-  workflow_dispatch:       # Also allows manual trigger from GitHub
+  workflow_dispatch:       # Manual trigger
 
 jobs:
   scrape:
@@ -24,6 +24,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          ANTHROPIC_KEY: ${{ secrets.ANTHROPIC_KEY }}
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
           ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
